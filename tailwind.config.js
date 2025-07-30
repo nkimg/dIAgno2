@@ -1,4 +1,6 @@
 /** @type {import('tailwindcss').Config} */
+import defaultTheme from 'tailwindcss/defaultTheme'; // <<< MUDANÇA 1: Importar o tema padrão
+
 export default {
   content: [
     "./index.html",
@@ -6,6 +8,10 @@ export default {
   ],
   theme: {
     extend: {
+      // <<< MUDANÇA 2: Adicionar a configuração da nova família de fontes
+      fontFamily: {
+        sans: ['Roboto', ...defaultTheme.fontFamily.sans],
+      },
       colors: {
         'background': '#F8F7F4',
         'surface': '#FFFFFF',
@@ -15,7 +21,6 @@ export default {
         'text-subtle': '#666666',
         'border-color': '#EAEAEA',
       },
-      // <<< MUDANÇA: Adicionamos a definição do nosso gradiente
       backgroundImage: {
         'header-gradient': 'linear-gradient(120deg, #7895CB 0%, #A0BFE0 50%, #C5DFF8 100%)',
       }
