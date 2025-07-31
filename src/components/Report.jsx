@@ -1,18 +1,23 @@
-import React, { useEffect, useRef } from 'react';
+// src/components/Report.jsx - VERSÃO FINAL COMPLETA
+
+import React, { useState, useEffect, useRef } from 'react';
 import { Chart as ChartJS, registerables } from 'chart.js';
 import { Radar, Bar } from 'react-chartjs-2';
 import { MatrixController, MatrixElement } from 'chartjs-chart-matrix';
 import { syndromes, sections, translations } from '../data/mtcData';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
+import ReactMarkdown from 'react-markdown';
+import { generatePremiumAnalysis } from '../services/geminiService';
 
-// Registra todos os componentes do Chart.js, incluindo o de Matrix
 ChartJS.register(...registerables, MatrixController, MatrixElement);
-
 
 function Report({ patientInfo, scores, onBack, onNew }) {
     const reportRef = useRef(null);
-    const [loadingPdf, setLoadingPdf] = React.useState(false);
+    const [loadingPdf, setLoadingPdf] = useState(false);
+    const [premiumAnalysis, setPremiumAnalysis] = useState('');
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [analysisError, setAnalysisError] = useState('');
 
     // --- LÓGICA DE CÁLCULO E PREPARAÇÃO DOS DADOS ---
     const totalScore = Object.values(scores).reduce((sum, data) => sum + data.score, 0);
@@ -29,9 +34,7 @@ function Report({ patientInfo, scores, onBack, onNew }) {
         .filter(s => s.score > 0)
         .sort((a, b) => b.score - a.score);
 
-    // --- DADOS PARA OS GRÁFICOS ---
-    
-    // KPIs
+    // --- DADOS PARA OS GRÁFICOS E KPIs ---
     let qiStatus = { 'Deficiência': 0, 'Estagnação': 0 };
     let yinYangStatus = { 'Def. Yin': 0, 'Def. Yang': 0, 'Excesso Yang': 0 };
     let pathogens = {};
@@ -51,7 +54,6 @@ function Report({ patientInfo, scores, onBack, onNew }) {
     });
     const topPathogens = Object.keys(pathogens).join(', ') || 'Nenhum detectado';
     
-    // Gráfico de Radar
     const categoryScores = {};
     sections.forEach(section => {
         let count = section.questions.filter(q => scores.allCheckedIds?.has(q.id)).length;
@@ -69,7 +71,6 @@ function Report({ patientInfo, scores, onBack, onNew }) {
         }]
     };
     
-    // Gráfico de Barras (Secundárias)
     const secondarySyndromes = sortedSyndromes.slice(3, 6);
     const barData = {
         labels: secondarySyndromes.map(s => s.name.replace(/<b>|<\/b>/g, '')),
@@ -81,13 +82,11 @@ function Report({ patientInfo, scores, onBack, onNew }) {
             borderWidth: 1
         }]
     };
-
-    // Gráfico Heatmap (Matrix)
+    
     const heatmapCanvasRef = useRef(null);
     useEffect(() => {
         const heatmapCtx = heatmapCanvasRef.current?.getContext('2d');
         if (!heatmapCtx) return;
-
         const zangfuY = ['Fígado', 'Coração', 'Baço', 'Pulmão', 'Rim', 'Bexiga', 'Estômago', 'Intestino Grosso', 'Intestino Delgado', 'Vesícula Biliar'];
         const patternsX = ['Def. Qi', 'Def. Yang', 'Def. Yin', 'Def. Xue', 'Estagnação Qi', 'Estagnação Xue', 'Umidade-Calor', 'Fogo', 'Vento', 'Frio'];
         const heatmapData = [];
@@ -104,49 +103,17 @@ function Report({ patientInfo, scores, onBack, onNew }) {
              if (synData.pathogen === 'fire') patternLabel = 'Fogo';
              if (synData.pathogen === 'wind') patternLabel = 'Vento';
              if (synData.pathogen === 'cold') patternLabel = 'Frio';
-    
             if (synData.zangfu && patternLabel) {
                 heatmapData.push({ x: patternLabel, y: synData.zangfu, v: s.score });
             }
         });
-
         const chart = new ChartJS(heatmapCtx, {
-            type: 'matrix',
-            data: {
-                datasets: [{
-                    label: 'Pontuação',
-                    data: heatmapData,
-                    backgroundColor: (ctx) => {
-                        const value = ctx.dataset.data[ctx.dataIndex]?.v;
-                        if (!value) return 'rgba(240, 240, 240, 0.5)';
-                        const alpha = 0.1 + (value / 5);
-                        return `rgba(255, 99, 132, ${alpha > 1 ? 1 : alpha})`;
-                    },
-                    borderColor: 'rgba(200, 200, 200, 0.6)',
-                    borderWidth: 1,
-                    width: ({chart}) => (chart.chartArea || {}).width / patternsX.length - 1,
-                    height: ({chart}) => (chart.chartArea || {}).height / zangfuY.length - 1
-                }]
-            },
-            options: {
-                scales: {
-                    x: { type: 'category', labels: patternsX, grid: { display: false } },
-                    y: { type: 'category', labels: zangfuY, grid: { display: false }, offset: true }
-                },
-                plugins: { legend: { display: false }, tooltip: {
-                    callbacks: {
-                        title: () => '',
-                        label: (ctx) => `Padrão: ${ctx.raw.x}, ${ctx.raw.y} | Pontos: ${ctx.raw.v}`
-                    }
-                }}
-            }
+            type: 'matrix', data: { datasets: [{ label: 'Pontuação', data: heatmapData, backgroundColor: (ctx) => { const value = ctx.dataset.data[ctx.dataIndex]?.v; if (!value) return 'rgba(240, 240, 240, 0.5)'; const alpha = 0.1 + (value / 5); return `rgba(255, 99, 132, ${alpha > 1 ? 1 : alpha})`; }, borderColor: 'rgba(200, 200, 200, 0.6)', borderWidth: 1, width: ({chart}) => (chart.chartArea || {}).width / patternsX.length - 1, height: ({chart}) => (chart.chartArea || {}).height / zangfuY.length - 1 }] },
+            options: { scales: { x: { type: 'category', labels: patternsX, grid: { display: false } }, y: { type: 'category', labels: zangfuY, grid: { display: false }, offset: true } }, plugins: { legend: { display: false }, tooltip: { callbacks: { title: () => '', label: (ctx) => `Padrão: ${ctx.raw.x}, ${ctx.raw.y} | Pontos: ${ctx.raw.v}` } } } }
         });
-        
-        return () => chart.destroy(); // Limpa o gráfico ao desmontar
-
+        return () => chart.destroy();
     }, [sortedSyndromes]);
 
-    // Síndromes Correlacionadas
     const mainSyndrome = sortedSyndromes[0];
     const relatedSyndromesData = {};
     if(mainSyndrome){
@@ -156,12 +123,7 @@ function Report({ patientInfo, scores, onBack, onNew }) {
                     if (`${section.title}: ${question.label}` === symptomLabel) {
                         question.syndromes.forEach(relatedKey => {
                             if (relatedKey !== mainSyndrome.key) {
-                                if (!relatedSyndromesData[relatedKey]) {
-                                    relatedSyndromesData[relatedKey] = {
-                                        name: syndromes[relatedKey]?.name || relatedKey,
-                                        sharedSymptoms: []
-                                    };
-                                }
+                                if (!relatedSyndromesData[relatedKey]) { relatedSyndromesData[relatedKey] = { name: syndromes[relatedKey]?.name || relatedKey, sharedSymptoms: [] }; }
                                 relatedSyndromesData[relatedKey].sharedSymptoms.push(question.label);
                             }
                         });
@@ -172,12 +134,12 @@ function Report({ patientInfo, scores, onBack, onNew }) {
     }
     const sortedRelated = Object.values(relatedSyndromesData).sort((a, b) => b.sharedSymptoms.length - a.sharedSymptoms.length);
 
+    // --- FUNÇÕES DE INTERAÇÃO ---
     const handleExportPdf = () => {
         setLoadingPdf(true);
         const reportElement = reportRef.current;
         const buttons = reportElement.querySelectorAll('button');
         buttons.forEach(btn => btn.style.visibility = 'hidden');
-
         setTimeout(() => {
             html2canvas(reportElement, { scale: 2, useCORS: true, windowHeight: reportElement.scrollHeight, scrollY: -window.scrollY })
                 .then(canvas => {
@@ -192,9 +154,30 @@ function Report({ patientInfo, scores, onBack, onNew }) {
                     buttons.forEach(btn => btn.style.visibility = 'visible');
                     setLoadingPdf(false);
                 });
-        }, 50); // Pequeno timeout para o DOM atualizar
+        }, 50);
     };
 
+    const handlePremiumAnalysis = async () => {
+        setIsAnalyzing(true);
+        setAnalysisError('');
+        setPremiumAnalysis('');
+        try {
+            let fullAnamnesisText = '';
+            sections.forEach(section => {
+                const checkedQuestions = section.questions.filter(q => scores.allCheckedIds?.has(q.id));
+                if (checkedQuestions.length > 0) {
+                    fullAnamnesisText += `\n**${section.title}:**\n`;
+                    checkedQuestions.forEach(q => { fullAnamnesisText += `- ${q.label}\n`; });
+                }
+            });
+            const analysis = await generatePremiumAnalysis(patientInfo, sortedSyndromes, fullAnamnesisText);
+            setPremiumAnalysis(analysis);
+        } catch (error) {
+            setAnalysisError(error.message);
+        } finally {
+            setIsAnalyzing(false);
+        }
+    };
 
     if (sortedSyndromes.length === 0) {
         return (
@@ -202,11 +185,11 @@ function Report({ patientInfo, scores, onBack, onNew }) {
                 <h2 className="text-2xl font-bold mb-4">Nenhum sintoma selecionado.</h2>
                 <button onClick={onBack} className="bg-blue-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-600 transition">Voltar ao Formulário</button>
             </div>
-        )
+        );
     }
 
   return (
-    <div ref={reportRef} className="container mx-auto p-4 md:p-8">
+    <div ref={reportRef} className="container mx-auto p-4 md:p-8 bg-background font-sans">
         <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-gray-800">dIAgno 2.0</h1>
             <p className="text-sm text-gray-500">Relatório de Análise Energética</p>
@@ -220,6 +203,25 @@ function Report({ patientInfo, scores, onBack, onNew }) {
             <div className="p-4 bg-blue-50 rounded-lg shadow text-center"><h3 className="font-bold text-lg mb-2">Situação do Qi</h3><p className="text-sm">Deficiência: {qiStatus['Deficiência']} | Estagnação: {qiStatus['Estagnação']}</p></div>
             <div className="p-4 bg-green-50 rounded-lg shadow text-center"><h3 className="font-bold text-lg mb-2">Balanço Yin/Yang</h3><p className="text-sm">Def. Yin: {yinYangStatus['Def. Yin']} | Def. Yang: {yinYangStatus['Def. Yang']} | Excesso Yang: {yinYangStatus['Excesso Yang']}</p></div>
             <div className="p-4 bg-red-50 rounded-lg shadow text-center"><h3 className="font-bold text-lg mb-2">Qi Perverso</h3><p className="text-sm">{topPathogens}</p></div>
+        </div>
+
+        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-6 rounded-2xl shadow-lg mb-6 border border-indigo-200">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h2 className="text-2xl font-semibold text-primary">Análise Premium com IA</h2>
+                    <p className="text-text-subtle text-sm">Insights aprofundados gerados pelo Gemini.</p>
+                </div>
+                <button onClick={handlePremiumAnalysis} disabled={isAnalyzing} className="bg-primary text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-primary-dark transition-all duration-300 disabled:bg-gray-400 disabled:cursor-wait">
+                    {isAnalyzing ? 'Analisando...' : 'Gerar Análise'}
+                </button>
+            </div>
+            {isAnalyzing && <div className="text-center p-8 text-primary">Analisando o caso, por favor aguarde...</div>}
+            {analysisError && <div className="mt-4 p-4 bg-red-100 text-red-700 border border-red-300 rounded-lg">{analysisError}</div>}
+            {premiumAnalysis && (
+                <div className="mt-6 prose prose-indigo max-w-none bg-white/50 p-6 rounded-lg">
+                    <ReactMarkdown>{premiumAnalysis}</ReactMarkdown>
+                </div>
+            )}
         </div>
     
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

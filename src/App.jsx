@@ -1,3 +1,5 @@
+// src/App.jsx - VERSÃO COMPLETA E RESTAURADA
+
 import React, { useState } from 'react';
 import PatientInfoModal from './components/PatientInfoModal';
 import AnamnesisForm from './components/AnamnesisForm';
@@ -8,8 +10,6 @@ function App() {
   const [appState, setAppState] = useState('modal');
   const [patientInfo, setPatientInfo] = useState(null);
   const [syndromeScores, setSyndromeScores] = useState(null);
-
-  // <<< MUDANÇA 1: O estado dos sintomas agora vive aqui, no componente principal.
   const [selectedSymptoms, setSelectedSymptoms] = useState(new Set());
 
   const handleStartAnamnesis = (info) => {
@@ -17,18 +17,12 @@ function App() {
     setAppState('form');
   };
 
-  // <<< MUDANÇA 2: Nova função para o formulário usar para atualizar o estado.
   const handleSymptomChange = (questionId, isChecked) => {
     const newSet = new Set(selectedSymptoms);
-    if (isChecked) {
-      newSet.add(questionId);
-    } else {
-      newSet.delete(questionId);
-    }
+    isChecked ? newSet.add(questionId) : newSet.delete(questionId);
     setSelectedSymptoms(newSet);
   };
   
-  // <<< MUDANÇA 3: A função agora usa o estado que já vive aqui, em vez de receber como argumento.
   const handleGenerateReport = () => {
     const scores = {};
     Object.keys(syndromes).forEach(key => {
@@ -37,7 +31,7 @@ function App() {
 
     sections.forEach(section => {
         section.questions.forEach(question => {
-            if (selectedSymptoms.has(question.id)) { // Usa o estado local
+            if (selectedSymptoms.has(question.id)) {
                 question.syndromes.forEach(syndromeKey => {
                     if (scores[syndromeKey] !== undefined) {
                         scores[syndromeKey].score++;
@@ -53,15 +47,18 @@ function App() {
     window.scrollTo(0, 0);
   };
 
-  const handleBackToForm = () => setAppState('form');
+  const handleBackToForm = () => {
+    setAppState('form');
+    window.scrollTo(0, 0); 
+  };
+  
   const handleNewAnamnesis = () => window.location.reload();
 
   return (
-    <div className="bg-gray-100 text-gray-800 font-sans min-h-screen">
+    <div className="bg-background text-text-main font-sans min-h-screen">
       {appState === 'modal' && <PatientInfoModal onStart={handleStartAnamnesis} />}
       
       {appState === 'form' && patientInfo && (
-        // <<< MUDANÇA 4: Passamos o estado e a função de atualização para o formulário.
         <AnamnesisForm 
             patientInfo={patientInfo} 
             onSubmit={handleGenerateReport}
