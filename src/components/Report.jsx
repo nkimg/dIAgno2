@@ -1,4 +1,4 @@
-// src/components/Report.jsx - VERSÃO COMPLETA E CORRIGIDA
+// src/components/Report.jsx - VERSÃO COMPLETA COM MODAL DE CONSENTIMENTO
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Chart as ChartJS, registerables } from 'chart.js';
@@ -9,6 +9,7 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import ReactMarkdown from 'react-markdown';
 import { generatePremiumAnalysis } from '../services/geminiService';
+import PrivacyConsentModal from './PrivacyConsentModal';
 
 ChartJS.register(...registerables, MatrixController, MatrixElement);
 
@@ -18,6 +19,7 @@ function Report({ patientInfo, scores, onBack, onNew }) {
     const [premiumAnalysis, setPremiumAnalysis] = useState('');
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [analysisError, setAnalysisError] = useState('');
+    const [isPrivacyModalVisible, setIsPrivacyModalVisible] = useState(false);
 
     const initialSortedSyndromes = Object.entries(scores)
         .map(([key, data]) => ({
@@ -112,7 +114,8 @@ function Report({ patientInfo, scores, onBack, onNew }) {
     }
     const sortedRelated = Object.values(relatedSyndromesData).sort((a, b) => b.sharedSymptoms.length - a.sharedSymptoms.length);
 
-    const handlePremiumAnalysis = async () => {
+    const handleConfirmAndAnalyze = async () => {
+        setIsPrivacyModalVisible(false);
         setIsAnalyzing(true);
         setAnalysisError('');
         setPremiumAnalysis('');
@@ -137,17 +140,10 @@ function Report({ patientInfo, scores, onBack, onNew }) {
     const handleExportPdf = () => {
         setLoadingPdf(true);
         const reportElement = reportRef.current;
-        
-        // Encontra todos os botões e o container do heatmap
-        const buttons = reportElement.querySelectorAll('button');
         const heatmapContainer = reportElement.querySelector('#heatmap-container');
-
-        // Oculta os elementos
-        buttons.forEach(btn => btn.style.display = 'none');
         if (heatmapContainer) {
             heatmapContainer.style.display = 'none';
         }
-
         setTimeout(() => {
             html2canvas(reportElement, { scale: 2, useCORS: true, windowHeight: reportElement.scrollHeight, scrollY: -window.scrollY })
                 .then(canvas => {
@@ -159,16 +155,13 @@ function Report({ patientInfo, scores, onBack, onNew }) {
                     pdf.save(`relatorio-${patientInfo.name.replace(/ /g, '_') || 'paciente'}.pdf`);
                 })
                 .finally(() => {
-                    // Garante que os elementos voltem a aparecer, mesmo em caso de erro
-                    buttons.forEach(btn => btn.style.display = ''); // Reseta para o padrão
                     if (heatmapContainer) {
-                       heatmapContainer.style.display = ''; // Reseta para o padrão
+                       heatmapContainer.style.display = '';
                     }
                     setLoadingPdf(false);
                 });
         }, 100);
     };
-
 
     if (sortedSyndromes.length === 0) {
         return (
@@ -180,6 +173,7 @@ function Report({ patientInfo, scores, onBack, onNew }) {
     }
 
   return (
+    <>
       <div ref={reportRef} className="container mx-auto p-4 md:p-8 bg-background font-sans">
           <div className="text-center mb-8">
               <h1 className="text-4xl font-bold text-gray-800">dIAgno 2.0</h1>
@@ -190,7 +184,7 @@ function Report({ patientInfo, scores, onBack, onNew }) {
                <p className="text-sm text-gray-600">{patientInfo.genderLabel}, {patientInfo.age} anos</p>
           </div>
       
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <div className="grid grid-cols-1 md-grid-cols-3 gap-6 mb-6">
               <div className="p-4 bg-blue-50 rounded-lg shadow text-center"><h3 className="font-bold text-lg mb-2">Situação do Qi</h3><p className="text-sm">Deficiência: {qiStatus['Deficiência']} | Estagnação: {qiStatus['Estagnação']}</p></div>
               <div className="p-4 bg-green-50 rounded-lg shadow text-center"><h3 className="font-bold text-lg mb-2">Balanço Yin/Yang</h3><p className="text-sm">Def. Yin: {yinYangStatus['Def. Yin']} | Def. Yang: {yinYangStatus['Def. Yang']} | Excesso Yang: {yinYangStatus['Excesso Yang']}</p></div>
               <div className="p-4 bg-red-50 rounded-lg shadow text-center"><h3 className="font-bold text-lg mb-2">Qi Perverso</h3><p className="text-sm">{topPathogens}</p></div>
@@ -202,7 +196,7 @@ function Report({ patientInfo, scores, onBack, onNew }) {
                       <h2 className="text-2xl font-semibold text-primary">Análise Premium com IA</h2>
                       <p className="text-text-subtle text-sm">Insights aprofundados gerados pelo Gemini.</p>
                   </div>
-                  <button onClick={handlePremiumAnalysis} disabled={isAnalyzing} className="bg-primary text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-primary-dark transition-all duration-300 disabled:bg-gray-400 disabled:cursor-wait">
+                  <button onClick={() => setIsPrivacyModalVisible(true)} disabled={isAnalyzing} className="bg-primary text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-primary-dark transition-all duration-300 disabled:bg-gray-400 disabled:cursor-wait">
                       {isAnalyzing ? 'Analisando...' : 'Gerar Análise'}
                   </button>
               </div>
@@ -307,6 +301,12 @@ function Report({ patientInfo, scores, onBack, onNew }) {
               </p>
           </div>
       </div>
+      <PrivacyConsentModal
+        isOpen={isPrivacyModalVisible}
+        onClose={() => setIsPrivacyModalVisible(false)}
+        onConfirm={handleConfirmAndAnalyze}
+      />
+    </>
   );
 }
 
