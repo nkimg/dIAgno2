@@ -1,9 +1,9 @@
-// src/components/AnamnesisForm.jsx - VERSÃO COM TUDO INCLUSO E BOTÃO DE EDIÇÃO
+// src/components/AnamnesisForm.jsx - VERSÃO COMPLETA COM CAMPOS DE TEXTO
 
 import React, { useState, useEffect, useRef } from 'react';
 import { sections } from '../data/mtcData';
 import Tag from './Tag';
-import EditPatientModal from './EditPatientModal'; // Importamos o novo modal
+import EditPatientModal from './EditPatientModal';
 
 // --- Componente Interno: QuestionCard ---
 function QuestionCard({ section, selectedSymptoms, onSymptomChange, colorName }) {
@@ -62,6 +62,8 @@ function NavButton({ section, isActive, colorName, onClick, count }) {
 // --- Componente Principal do Arquivo ---
 function AnamnesisForm({ patientInfo, onSubmit, selectedSymptoms, onSymptomChange, onPatientUpdate }) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [queixaPrincipal, setQueixaPrincipal] = useState('');
+  const [anotacoesExtras, setAnotacoesExtras] = useState('');
 
   const filteredSections = sections.filter(s => s.gender === 'all' || s.gender === patientInfo.gender);
   const [activeSectionId, setActiveSectionId] = useState(filteredSections[0]?.id);
@@ -129,6 +131,31 @@ function AnamnesisForm({ patientInfo, onSubmit, selectedSymptoms, onSymptomChang
                 </button>
               </div>
 
+              <div className="bg-surface p-6 rounded-2xl shadow-sm space-y-4">
+                <div>
+                  <label htmlFor="queixa-principal" className="block text-lg font-bold text-text-main mb-2">Queixa Principal</label>
+                  <textarea 
+                    id="queixa-principal"
+                    rows="3"
+                    className="w-full p-3 border border-border-color rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition"
+                    placeholder="Descreva a principal queixa do paciente..."
+                    value={queixaPrincipal}
+                    onChange={(e) => setQueixaPrincipal(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="anotacoes-extras" className="block text-lg font-bold text-text-main mb-2">Anotações Extras</label>
+                  <textarea 
+                    id="anotacoes-extras"
+                    rows="3"
+                    className="w-full p-3 border border-border-color rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition"
+                    placeholder="Observações adicionais do terapeuta, pulso, língua..."
+                    value={anotacoesExtras}
+                    onChange={(e) => setAnotacoesExtras(e.target.value)}
+                  />
+                </div>
+              </div>
+
               <QuestionCard 
                 section={activeSection} 
                 selectedSymptoms={selectedSymptoms}
@@ -137,7 +164,7 @@ function AnamnesisForm({ patientInfo, onSubmit, selectedSymptoms, onSymptomChang
               />
               
               <div className="text-center">
-                <button onClick={onSubmit} className="bg-primary text-white font-bold py-3 px-12 rounded-lg shadow-lg hover:bg-opacity-90 transition-all duration-300 transform hover:scale-105">
+                <button onClick={() => onSubmit({ queixaPrincipal, anotacoesExtras })} className="bg-primary text-white font-bold py-3 px-12 rounded-lg shadow-lg hover:bg-opacity-90 transition-all duration-300 transform hover:scale-105">
                   Gerar Relatório
                 </button>
               </div>

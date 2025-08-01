@@ -1,4 +1,4 @@
-// src/components/Report.jsx - VERSÃO COMPLETA COM MODAL DE CONSENTIMENTO
+// src/components/Report.jsx - VERSÃO COMPLETA COM DADOS DE TEXTO CORRIGIDOS PARA A IA
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Chart as ChartJS, registerables } from 'chart.js';
@@ -13,13 +13,51 @@ import PrivacyConsentModal from './PrivacyConsentModal';
 
 ChartJS.register(...registerables, MatrixController, MatrixElement);
 
-function Report({ patientInfo, scores, onBack, onNew }) {
+const ActionButtons = ({ loadingPdf, onExport, onBack, onNew, isTop = false }) => {
+    const baseClasses = "inline-flex items-center justify-center font-bold rounded-lg transition disabled:bg-gray-400";
+    const topSizeClasses = "text-sm py-2 px-4";
+    const bottomSizeClasses = "py-3 px-6";
+
+    const exportClasses = "bg-red-600 text-white hover:bg-red-700";
+    const backClasses = "bg-blue-500 text-white hover:bg-blue-600";
+    const newClasses = "bg-gray-500 text-white hover:bg-gray-600";
+    
+    const containerClasses = isTop 
+      ? "flex flex-col items-start gap-2" 
+      : "mt-12 flex justify-center gap-4";
+
+    return (
+        <div id={isTop ? 'action-buttons-top' : 'action-buttons-bottom'} className={containerClasses}>
+            <button onClick={onExport} disabled={loadingPdf} className={`${baseClasses} ${isTop ? topSizeClasses : bottomSizeClasses} ${exportClasses}`}>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5 mr-2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                {loadingPdf ? 'Gerando...' : 'Exportar PDF'}
+            </button>
+            <button onClick={onBack} className={`${baseClasses} ${isTop ? topSizeClasses : bottomSizeClasses} ${backClasses}`}>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5 mr-2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" /></svg>
+                Voltar ao Formulário
+            </button>
+            <button onClick={onNew} className={`${baseClasses} ${isTop ? topSizeClasses : bottomSizeClasses} ${newClasses}`}>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5 mr-2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                Iniciar Nova Anamnese
+            </button>
+        </div>
+    );
+};
+
+
+function Report({ reportData, onBack, onNew }) {
+    const { patientInfo, scores, queixaPrincipal, anotacoesExtras } = reportData;
+
     const reportRef = useRef(null);
     const [loadingPdf, setLoadingPdf] = useState(false);
     const [premiumAnalysis, setPremiumAnalysis] = useState('');
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [analysisError, setAnalysisError] = useState('');
     const [isPrivacyModalVisible, setIsPrivacyModalVisible] = useState(false);
+
+    const consultationDate = new Date().toLocaleDateString('pt-BR', {
+        day: '2-digit', month: 'long', year: 'numeric'
+    });
 
     const initialSortedSyndromes = Object.entries(scores)
         .map(([key, data]) => ({
@@ -128,7 +166,8 @@ function Report({ patientInfo, scores, onBack, onNew }) {
                     checkedQuestions.forEach(q => { fullAnamnesisText += `- ${q.label}\n`; });
                 }
             });
-            const analysis = await generatePremiumAnalysis(patientInfo, sortedSyndromes, fullAnamnesisText);
+            // <<< MUDANÇA: Passando as variáveis corretas para a API
+            const analysis = await generatePremiumAnalysis(patientInfo, sortedSyndromes, fullAnamnesisText, queixaPrincipal, anotacoesExtras);
             setPremiumAnalysis(analysis);
         } catch (error) {
             setAnalysisError(error.message);
@@ -140,10 +179,14 @@ function Report({ patientInfo, scores, onBack, onNew }) {
     const handleExportPdf = () => {
         setLoadingPdf(true);
         const reportElement = reportRef.current;
+        const topButtons = reportElement.querySelector('#action-buttons-top');
+        const bottomButtons = reportElement.querySelector('#action-buttons-bottom');
         const heatmapContainer = reportElement.querySelector('#heatmap-container');
-        if (heatmapContainer) {
-            heatmapContainer.style.display = 'none';
-        }
+        
+        if (topButtons) topButtons.style.display = 'none';
+        if (bottomButtons) bottomButtons.style.display = 'none';
+        if (heatmapContainer) heatmapContainer.style.display = 'none';
+
         setTimeout(() => {
             html2canvas(reportElement, { scale: 2, useCORS: true, windowHeight: reportElement.scrollHeight, scrollY: -window.scrollY })
                 .then(canvas => {
@@ -155,9 +198,9 @@ function Report({ patientInfo, scores, onBack, onNew }) {
                     pdf.save(`relatorio-${patientInfo.name.replace(/ /g, '_') || 'paciente'}.pdf`);
                 })
                 .finally(() => {
-                    if (heatmapContainer) {
-                       heatmapContainer.style.display = '';
-                    }
+                    if (topButtons) topButtons.style.display = '';
+                    if (bottomButtons) bottomButtons.style.display = '';
+                    if (heatmapContainer) heatmapContainer.style.display = '';
                     setLoadingPdf(false);
                 });
         }, 100);
@@ -175,22 +218,41 @@ function Report({ patientInfo, scores, onBack, onNew }) {
   return (
     <>
       <div ref={reportRef} className="container mx-auto p-4 md:p-8 bg-background font-sans">
-          <div className="text-center mb-8">
-              <h1 className="text-4xl font-bold text-gray-800">dIAgno 2.0</h1>
-              <p className="text-sm text-gray-500">Relatório de Análise Energética</p>
-          </div>
-          <div className="mb-6 p-4 bg-blue-100 border border-blue-300 rounded-lg text-center">
-               <h1 className="text-2xl font-bold text-gray-800">{patientInfo.name}</h1>
-               <p className="text-sm text-gray-600">{patientInfo.genderLabel}, {patientInfo.age} anos</p>
-          </div>
-      
-          <div className="grid grid-cols-1 md-grid-cols-3 gap-6 mb-6">
-              <div className="p-4 bg-blue-50 rounded-lg shadow text-center"><h3 className="font-bold text-lg mb-2">Situação do Qi</h3><p className="text-sm">Deficiência: {qiStatus['Deficiência']} | Estagnação: {qiStatus['Estagnação']}</p></div>
-              <div className="p-4 bg-green-50 rounded-lg shadow text-center"><h3 className="font-bold text-lg mb-2">Balanço Yin/Yang</h3><p className="text-sm">Def. Yin: {yinYangStatus['Def. Yin']} | Def. Yang: {yinYangStatus['Def. Yang']} | Excesso Yang: {yinYangStatus['Excesso Yang']}</p></div>
-              <div className="p-4 bg-red-50 rounded-lg shadow text-center"><h3 className="font-bold text-lg mb-2">Qi Perverso</h3><p className="text-sm">{topPathogens}</p></div>
-          </div>
+          <header className="flex justify-between items-start mb-6">
+              <div className="flex flex-col gap-4">
+                  <img src="/logo.png" alt="dIAgno 2.0 Logo" className="w-24 h-auto" />
+                  <ActionButtons 
+                      loadingPdf={loadingPdf} 
+                      onExport={handleExportPdf} 
+                      onBack={onBack} 
+                      onNew={onNew} 
+                      isTop={true} 
+                  />
+              </div>
+              <div className="text-right">
+                  <h1 className="text-3xl font-bold text-gray-800">Relatório de Paciente</h1>
+                  <p className="text-lg text-gray-600 mt-1">{patientInfo.name}</p>
+                  <p className="text-sm text-gray-500">{patientInfo.genderLabel}, {patientInfo.age} anos</p>
+                  <p className="text-sm font-semibold text-primary mt-2">{consultationDate}</p>
+              </div>
+          </header>
 
-          <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-6 rounded-2xl shadow-lg mb-6 border border-indigo-200">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="bg-blue-100 border-l-4 border-blue-500 p-4 rounded-r-lg shadow-sm">
+                  <h3 className="font-bold text-lg text-blue-800 mb-1">Situação do Qi</h3>
+                  <p className="text-sm text-blue-700">Deficiência: {qiStatus['Deficiência']} | Estagnação: {qiStatus['Estagnação']}</p>
+              </div>
+              <div className="bg-green-100 border-l-4 border-green-500 p-4 rounded-r-lg shadow-sm">
+                  <h3 className="font-bold text-lg text-green-800 mb-1">Balanço Yin/Yang</h3>
+                  <p className="text-sm text-green-700">Def. Yin: {yinYangStatus['Def. Yin']} | Def. Yang: {yinYangStatus['Def. Yang']} | Excesso Yang: {yinYangStatus['Excesso Yang']}</p>
+              </div>
+              <div className="bg-red-100 border-l-4 border-red-500 p-4 rounded-r-lg shadow-sm">
+                  <h3 className="font-bold text-lg text-red-800 mb-1">Qi Perverso</h3>
+                  <p className="text-sm text-red-700">{topPathogens}</p>
+              </div>
+          </div>
+          
+          <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-6 rounded-2xl shadow-lg mb-8 border border-indigo-200">
               <div className="flex justify-between items-center">
                   <div>
                       <h2 className="text-2xl font-semibold text-primary">Análise Premium com IA</h2>
@@ -203,11 +265,11 @@ function Report({ patientInfo, scores, onBack, onNew }) {
               {isAnalyzing && <div className="text-center p-8 text-primary">Analisando o caso, por favor aguarde...</div>}
               {analysisError && <div className="mt-4 p-4 bg-red-100 text-red-700 border border-red-300 rounded-lg">{analysisError}</div>}
               {premiumAnalysis && (
-                  <div className="mt-6 bg-white/50 p-6 rounded-lg">
-                      <div className="prose prose-indigo max-w-none">
+                  <div className="mt-6 bg-white p-6 rounded-lg shadow-inner">
+                      <div className="prose prose-sm max-w-none prose-headings:font-bold prose-headings:text-primary prose-strong:text-text-main prose-li:marker:text-primary">
                           <ReactMarkdown>{premiumAnalysis}</ReactMarkdown>
                       </div>
-                      <p className="text-xs text-slate-500 italic mt-4 pt-4 border-t border-slate-200">
+                      <p className="text-xs text-slate-500 italic mt-6 pt-4 border-t border-slate-200">
                           <strong>Aviso:</strong> Esta análise foi gerada por IA (Gemini) e pode conter imprecisões. Utilize-a como um apoio ao seu raciocínio clínico, não como um substituto para o julgamento profissional.
                       </p>
                   </div>
@@ -280,20 +342,12 @@ function Report({ patientInfo, scores, onBack, onNew }) {
               </div>
           </div>
       
-          <div className="mt-12 flex flex-col items-center gap-3 max-w-xs mx-auto">
-              <button onClick={handleExportPdf} disabled={loadingPdf} className="inline-flex items-center justify-center w-full bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700 transition disabled:bg-gray-400">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5 mr-2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
-                  {loadingPdf ? 'Gerando...' : 'Exportar para PDF'}
-              </button>
-              <button onClick={onBack} className="inline-flex items-center justify-center w-full bg-blue-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-600 transition">
-                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5 mr-2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" /></svg>
-                  Voltar ao Formulário
-              </button>
-              <button onClick={onNew} className="inline-flex items-center justify-center w-full bg-gray-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600 transition">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5 mr-2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                  Iniciar Nova Anamnese
-              </button>
-          </div>
+          <ActionButtons 
+              loadingPdf={loadingPdf} 
+              onExport={handleExportPdf} 
+              onBack={onBack} 
+              onNew={onNew} 
+          />
 
           <div className="mt-10 text-center border-t border-gray-300 pt-4">
               <p className="text-xs text-gray-500">

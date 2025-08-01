@@ -1,4 +1,4 @@
-// src/components/EditPatientModal.jsx
+// src/components/EditPatientModal.jsx - VERSÃO CORRIGIDA
 
 import React, { useState, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
@@ -8,13 +8,13 @@ function EditPatientModal({ isOpen, onClose, currentPatient, onSave }) {
   const [name, setName] = useState('');
   const [birthDate, setBirthDate] = useState(null);
 
-  // Efeito para popular o modal com os dados atuais quando ele abre
   useEffect(() => {
-    if (currentPatient) {
+    if (currentPatient && isOpen) { // Popula os dados apenas quando o modal abre
       setName(currentPatient.name);
-      setBirthDate(new Date(currentPatient.birthDate));
+      // Garante que a data seja um objeto Date válido ou null
+      setBirthDate(currentPatient.birthDate ? new Date(currentPatient.birthDate) : null);
     }
-  }, [currentPatient]);
+  }, [currentPatient, isOpen]);
 
   const handleSave = () => {
     if (!name || !birthDate) {
@@ -27,12 +27,14 @@ function EditPatientModal({ isOpen, onClose, currentPatient, onSave }) {
     const age = Math.abs(ageDate.getUTCFullYear() - 1970);
     
     onSave({
-      ...currentPatient, // Mantém o gênero
+      ...currentPatient,
       name,
       birthDate: birthDate.toISOString().split('T')[0],
       age,
     });
-    onClose(); // Fecha o modal após salvar
+
+    // <<< MUDANÇA: Adicionar esta linha para fechar o modal
+    onClose(); 
   };
 
   if (!isOpen) return null;

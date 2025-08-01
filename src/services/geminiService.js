@@ -1,15 +1,17 @@
-// src/services/geminiService.js
+
+
+// src/services/geminiService.js - VERSÃO COM NOVOS CAMPOS
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
-export const generatePremiumAnalysis = async (patientInfo, sortedSyndromes, fullAnamnesis) => {
-  // 1. Construir um prompt detalhado e bem formatado
-  const prompt = `
-    Aja como um especialista sênior em Medicina Tradicional Chinesa (MTC) analisando um novo caso.
+export const generatePremiumAnalysis = async (patientInfo, sortedSyndromes, fullAnamnesis, queixaPrincipal, anotacoesExtras) => {
+  // <<< MUDANÇA: Prompt atualizado para incluir os novos campos de texto
+    const prompt = `
+    Aja como um especialista sênior em Medicina Tradicional Chinesa (MTC) analisando um novo caso. Mas nunca cite no output que você é um especialista sênior. Apenas gere a análise.
     
     **Dados do Paciente:**
     - Gênero: ${patientInfo.genderLabel}
@@ -42,7 +44,6 @@ NÃO USE TERMOS EM INGLÊS NUNCA . Nunca use coisas assim (Kidney Yang Deficienc
     (Liste UM diagnóstico diferencial importante. Para ele, forneça DUAS perguntas chave que o terapeuta pode fazer na próxima consulta para refinar o diagnóstico.)
   `;
 
-  // 2. Chamar a API
   try {
     const result = await model.generateContent(prompt);
     return result.response.text();
