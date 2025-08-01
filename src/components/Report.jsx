@@ -1,4 +1,4 @@
-// src/components/Report.jsx - VERSÃO ESTÁVEL E VERIFICADA
+// src/components/Report.jsx - VERSÃO COMPLETA E CORRIGIDA
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Chart as ChartJS, registerables } from 'chart.js';
@@ -137,8 +137,17 @@ function Report({ patientInfo, scores, onBack, onNew }) {
     const handleExportPdf = () => {
         setLoadingPdf(true);
         const reportElement = reportRef.current;
+        
+        // Encontra todos os botões e o container do heatmap
         const buttons = reportElement.querySelectorAll('button');
-        buttons.forEach(btn => btn.style.visibility = 'hidden');
+        const heatmapContainer = reportElement.querySelector('#heatmap-container');
+
+        // Oculta os elementos
+        buttons.forEach(btn => btn.style.display = 'none');
+        if (heatmapContainer) {
+            heatmapContainer.style.display = 'none';
+        }
+
         setTimeout(() => {
             html2canvas(reportElement, { scale: 2, useCORS: true, windowHeight: reportElement.scrollHeight, scrollY: -window.scrollY })
                 .then(canvas => {
@@ -150,11 +159,16 @@ function Report({ patientInfo, scores, onBack, onNew }) {
                     pdf.save(`relatorio-${patientInfo.name.replace(/ /g, '_') || 'paciente'}.pdf`);
                 })
                 .finally(() => {
-                    buttons.forEach(btn => btn.style.visibility = 'visible');
+                    // Garante que os elementos voltem a aparecer, mesmo em caso de erro
+                    buttons.forEach(btn => btn.style.display = ''); // Reseta para o padrão
+                    if (heatmapContainer) {
+                       heatmapContainer.style.display = ''; // Reseta para o padrão
+                    }
                     setLoadingPdf(false);
                 });
-        }, 50);
+        }, 100);
     };
+
 
     if (sortedSyndromes.length === 0) {
         return (
@@ -229,7 +243,7 @@ function Report({ patientInfo, scores, onBack, onNew }) {
                       <h2 className="text-2xl font-semibold mb-4 text-gray-800">Hipóteses Secundárias (4ª a 6ª)</h2>
                       {secondarySyndromes.length > 0 ? <Bar data={barData} options={{ indexAxis: 'y', scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } }} /> : <p>Não há hipóteses secundárias.</p>}
                   </div>
-                  <div className="bg-white p-6 rounded-lg shadow-lg">
+                  <div id="heatmap-container" className="bg-white p-6 rounded-lg shadow-lg">
                       <h2 className="text-2xl font-semibold mb-4 text-gray-800">Heatmap de Padrões por Órgão (Zang-Fu)</h2>
                       <canvas ref={heatmapCanvasRef}></canvas>
                   </div>

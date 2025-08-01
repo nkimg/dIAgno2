@@ -1,11 +1,13 @@
+// src/components/AnamnesisForm.jsx - VERSÃO COM TUDO INCLUSO E BOTÃO DE EDIÇÃO
+
 import React, { useState, useEffect, useRef } from 'react';
 import { sections } from '../data/mtcData';
 import Tag from './Tag';
+import EditPatientModal from './EditPatientModal'; // Importamos o novo modal
 
-// O QuestionCard não muda
+// --- Componente Interno: QuestionCard ---
 function QuestionCard({ section, selectedSymptoms, onSymptomChange, colorName }) {
   if (!section) return null;
-
   const styleMap = {
     rose: { bg: 'bg-rose-50', text: 'text-rose-600', border: 'border-rose-500' },
     amber: { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-500' },
@@ -15,9 +17,7 @@ function QuestionCard({ section, selectedSymptoms, onSymptomChange, colorName })
     cyan: { bg: 'bg-cyan-50', text: 'text-cyan-600', border: 'border-cyan-500' },
     default: { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-300' }
   };
-  
   const activeStyle = styleMap[colorName] || styleMap.default;
-
   return (
     <div className={`bg-surface rounded-2xl shadow-sm border-t-4 ${activeStyle.border}`}>
       <div className={`p-6 rounded-t-xl ${activeStyle.bg}`}>
@@ -34,6 +34,7 @@ function QuestionCard({ section, selectedSymptoms, onSymptomChange, colorName })
   );
 }
 
+// --- Componente Interno: NavButton ---
 function NavButton({ section, isActive, colorName, onClick, count }) {
   const styleMap = {
     rose: { bg: 'bg-rose-50', text: 'text-rose-600' },
@@ -58,7 +59,10 @@ function NavButton({ section, isActive, colorName, onClick, count }) {
   );
 }
 
-function AnamnesisForm({ patientInfo, onSubmit, selectedSymptoms, onSymptomChange }) {
+// --- Componente Principal do Arquivo ---
+function AnamnesisForm({ patientInfo, onSubmit, selectedSymptoms, onSymptomChange, onPatientUpdate }) {
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
   const filteredSections = sections.filter(s => s.gender === 'all' || s.gender === patientInfo.gender);
   const [activeSectionId, setActiveSectionId] = useState(filteredSections[0]?.id);
   const activeSection = filteredSections.find(s => s.id === activeSectionId);
@@ -81,64 +85,73 @@ function AnamnesisForm({ patientInfo, onSubmit, selectedSymptoms, onSymptomChang
   };
 
   return (
-    <div className="min-h-screen bg-background text-text-main font-sans">
-      <div className="container mx-auto p-4 md:p-8">
-        
-        {/* <<< MUDANÇA: O header agora é mínimo */}
-        <header className="mb-8 text-center">
+    <>
+      <div className="min-h-screen bg-page-gradient text-text-main font-sans">
+        <div className="container mx-auto p-4 md:p-8">
+          <header className="mb-8 text-center">
             <h1 className="text-4xl font-bold text-primary">dIAgno 2.0 <span className="font-light text-3xl text-primary/80">Beta</span></h1>
             <div className="text-xs text-text-subtle mt-4">
               <p><strong>Aviso:</strong> Esta é uma ferramenta de apoio aos estudos e não substitui uma consulta profissional.</p>
             </div>
-        </header>
+          </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-1">
-            <div className="bg-white/60 backdrop-blur-sm p-4 rounded-2xl shadow-sm sticky top-8 border border-white">
-              <h4 className="font-bold mb-4 text-text-main px-2">Seções</h4>
-              <div className="flex gap-4">
-                <nav className="flex flex-col gap-1 flex-1">
-                  {firstColumnSections.map((section) => {
-                    const originalIndex = filteredSections.findIndex(s => s.id === section.id);
-                    return (<NavButton key={section.id} section={section} isActive={section.id === activeSectionId} colorName={cardColorNames[originalIndex % cardColorNames.length]} onClick={() => setActiveSectionId(section.id)} count={symptomCountPerSection(section.id)} />);
-                  })}
-                </nav>
-                <nav className="flex flex-col gap-1 flex-1">
-                  {secondColumnSections.map((section) => {
-                    const originalIndex = filteredSections.findIndex(s => s.id === section.id);
-                    return (<NavButton key={section.id} section={section} isActive={section.id === activeSectionId} colorName={cardColorNames[originalIndex % cardColorNames.length]} onClick={() => setActiveSectionId(section.id)} count={symptomCountPerSection(section.id)} />);
-                  })}
-                </nav>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-1">
+              <div className="bg-white/60 backdrop-blur-sm p-4 rounded-2xl shadow-sm sticky top-8 border border-white">
+                <h4 className="font-bold mb-4 text-text-main px-2">Seções</h4>
+                <div className="flex gap-4">
+                  <nav className="flex flex-col gap-1 flex-1">
+                    {firstColumnSections.map((section) => {
+                      const originalIndex = filteredSections.findIndex(s => s.id === section.id);
+                      return (<NavButton key={section.id} section={section} isActive={section.id === activeSectionId} colorName={cardColorNames[originalIndex % cardColorNames.length]} onClick={() => setActiveSectionId(section.id)} count={symptomCountPerSection(section.id)} />);
+                    })}
+                  </nav>
+                  <nav className="flex flex-col gap-1 flex-1">
+                    {secondColumnSections.map((section) => {
+                      const originalIndex = filteredSections.findIndex(s => s.id === section.id);
+                      return (<NavButton key={section.id} section={section} isActive={section.id === activeSectionId} colorName={cardColorNames[originalIndex % cardColorNames.length]} onClick={() => setActiveSectionId(section.id)} count={symptomCountPerSection(section.id)} />);
+                    })}
+                  </nav>
+                </div>
               </div>
             </div>
-          </div>
-          
-          {/* <<< MUDANÇA: Coluna da direita agora contém mais elementos */}
-          <div className="lg:col-span-2 space-y-8" ref={contentColumnRef}>
-            {/* Card de Informações do Paciente */}
-            <div className="bg-surface p-6 rounded-2xl shadow-sm text-center">
-              <h2 className="text-2xl font-bold text-text-main">{patientInfo.name}</h2>
-              <p className="text-base text-text-subtle mt-1">{patientInfo.genderLabel}, {patientInfo.age} anos</p>
-            </div>
-
-            {/* Card de Perguntas Ativo */}
-            <QuestionCard 
-              section={activeSection} 
-              selectedSymptoms={selectedSymptoms}
-              onSymptomChange={onSymptomChange}
-              colorName={cardColorNames[filteredSections.findIndex(s => s.id === activeSectionId) % cardColorNames.length]}
-            />
             
-            {/* Botão de Ação */}
-            <div className="text-center">
-              <button onClick={onSubmit} className="bg-primary text-white font-bold py-3 px-12 rounded-lg shadow-lg hover:bg-opacity-90 transition-all duration-300 transform hover:scale-105">
-                Gerar Relatório
-              </button>
+            <div className="lg:col-span-2 space-y-8" ref={contentColumnRef}>
+              <div className="bg-surface p-6 rounded-2xl shadow-sm flex justify-between items-center">
+                <div className="text-center flex-1">
+                  <h2 className="text-2xl font-bold text-text-main">{patientInfo.name}</h2>
+                  <p className="text-base text-text-subtle mt-1">{patientInfo.genderLabel}, {patientInfo.age} anos</p>
+                </div>
+                <button onClick={() => setIsEditModalOpen(true)} className="text-text-subtle hover:text-primary transition-colors p-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
+              </div>
+
+              <QuestionCard 
+                section={activeSection} 
+                selectedSymptoms={selectedSymptoms}
+                onSymptomChange={onSymptomChange}
+                colorName={cardColorNames[filteredSections.findIndex(s => s.id === activeSectionId) % cardColorNames.length]}
+              />
+              
+              <div className="text-center">
+                <button onClick={onSubmit} className="bg-primary text-white font-bold py-3 px-12 rounded-lg shadow-lg hover:bg-opacity-90 transition-all duration-300 transform hover:scale-105">
+                  Gerar Relatório
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+      <EditPatientModal 
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        currentPatient={patientInfo}
+        onSave={onPatientUpdate}
+      />
+    </>
   );
 }
 

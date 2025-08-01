@@ -7,3 +7,8 @@
 .sortable-ghost { background: #dbeafe; opacity: 0.7; }
 .cursor-grab { cursor: grab; }
 .cursor-grab:active { cursor: grabbing; }
+/* Adicione esta classe no final do seu arquivo src/index.css */
+
+.hide-for-pdf {
+  display: none !important;
+}
