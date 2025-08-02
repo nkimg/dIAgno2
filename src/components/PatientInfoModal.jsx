@@ -87,9 +87,9 @@ function PatientInfoModal({ onStart }) {
           </p>
            <div className="mt-4 border-t border-gray-200 pt-4">
             <p className="text-xs text-gray-500">
-              <strong>Programação e Desenvolvimento:</strong> Ephraim Ferreira Medeiros<br />
+              <strong>UX Design e Desenvolvimento:</strong> Ephraim Ferreira Medeiros<br />
               <strong>Conceito e Banco de Dados:</strong> Wu Tou Kwang<br />
-              <strong>Baseado na planilha original de:</strong> Prof. Sérgio Destácio Junior (CEATA)
+              <strong>Baseado na planilha original do </strong> Prof. Sérgio Destácio Junior (CEATA)
             </p>
           </div>
         </div>

@@ -1,4 +1,4 @@
-// src/App.jsx - VERSÃO COMPLETA E CORRIGIDA
+// src/App.jsx - VERSÃO COM ESTADO PERSISTENTE PARA CAMPOS DE TEXTO
 
 import React, { useState } from 'react';
 import PatientInfoModal from './components/PatientInfoModal';
@@ -12,6 +12,9 @@ function App() {
   const [reportData, setReportData] = useState(null);
   const [selectedSymptoms, setSelectedSymptoms] = useState(new Set());
   const [sectionNotes, setSectionNotes] = useState({});
+  
+  // <<< MUDANÇA: O estado da Queixa Principal agora vive aqui
+  const [queixaPrincipal, setQueixaPrincipal] = useState('');
 
   const handleStartAnamnesis = (info) => {
     setPatientInfo(info);
@@ -22,11 +25,9 @@ function App() {
     setPatientInfo(updatedInfo);
   };
   
-  const handleGenerateReport = ({ queixaPrincipal }) => {
+  const handleGenerateReport = () => { // Não precisa mais receber formData
     const scores = {};
-    Object.keys(syndromes).forEach(key => {
-        scores[key] = { score: 0, symptoms: [] };
-    });
+    Object.keys(syndromes).forEach(key => { scores[key] = { score: 0, symptoms: [] }; });
     sections.forEach(section => {
         section.questions.forEach(question => {
             if (selectedSymptoms.has(question.id)) {
@@ -85,6 +86,9 @@ function App() {
           onPatientUpdate={handlePatientUpdate}
           sectionNotes={sectionNotes}
           onSectionNoteChange={handleSectionNoteChange}
+          // <<< MUDANÇA: Passa o valor e a função de atualização para a Queixa Principal
+          queixaPrincipal={queixaPrincipal}
+          onQueixaPrincipalChange={setQueixaPrincipal}
       />
     );
   }

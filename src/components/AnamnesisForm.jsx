@@ -1,10 +1,11 @@
-// src/components/AnamnesisForm.jsx - VERSÃO COMPLETA E CORRIGIDA
+// src/components/AnamnesisForm.jsx - VERSÃO COMPLETA E FINAL
 
 import React, { useState, useEffect, useRef } from 'react';
 import { sections } from '../data/mtcData';
 import Tag from './Tag';
 import EditPatientModal from './EditPatientModal';
 
+// --- Componente Interno: QuestionCard ---
 function QuestionCard({ section, selectedSymptoms, onSymptomChange, colorName, sectionNote, onSectionNoteChange }) {
   if (!section) return null;
   const styleMap = {
@@ -23,7 +24,7 @@ function QuestionCard({ section, selectedSymptoms, onSymptomChange, colorName, s
         <h3 className={`text-xl font-bold ${activeStyle.text}`}>{section.title}</h3>
       </div>
       <div className="p-6">
-        <div className="flex flex-wrap gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-6">
           {section.questions.map(q => (
             <Tag 
               key={q.id} 
@@ -51,6 +52,7 @@ function QuestionCard({ section, selectedSymptoms, onSymptomChange, colorName, s
   );
 }
 
+// --- Componente Interno: NavButton ---
 function NavButton({ section, isActive, colorName, onClick, count }) {
   const styleMap = {
     rose: { bg: 'bg-rose-50', text: 'text-rose-600' },
@@ -75,9 +77,9 @@ function NavButton({ section, isActive, colorName, onClick, count }) {
   );
 }
 
-function AnamnesisForm({ patientInfo, onSubmit, selectedSymptoms, onSymptomChange, onPatientUpdate, sectionNotes, onSectionNoteChange }) {
+// --- Componente Principal do Arquivo ---
+function AnamnesisForm({ patientInfo, onSubmit, selectedSymptoms, onSymptomChange, onPatientUpdate, sectionNotes, onSectionNoteChange, queixaPrincipal, onQueixaPrincipalChange }) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [queixaPrincipal, setQueixaPrincipal] = useState('');
 
   const filteredSections = sections.filter(s => s.gender === 'all' || s.gender === patientInfo.gender);
   const [activeSectionId, setActiveSectionId] = useState(filteredSections[0]?.id);
@@ -170,7 +172,7 @@ function AnamnesisForm({ patientInfo, onSubmit, selectedSymptoms, onSymptomChang
                   className="w-full p-3 border border-blue-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition bg-white"
                   placeholder="Descreva a principal queixa do paciente..."
                   value={queixaPrincipal}
-                  onChange={(e) => setQueixaPrincipal(e.target.value)}
+                  onChange={(e) => onQueixaPrincipalChange(e.target.value)}
                 />
               </div>
 

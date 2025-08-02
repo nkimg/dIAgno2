@@ -1,21 +1,33 @@
-
-
-// src/services/geminiService.js - VERSÃO COM NOVOS CAMPOS
+// src/services/geminiService.js - VERSÃO COM SEU PROMPT + PERGUNTAS ADICIONAIS
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { sections } from '../data/mtcData';
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
-export const generatePremiumAnalysis = async (patientInfo, sortedSyndromes, fullAnamnesis, queixaPrincipal, anotacoesExtras) => {
-  // <<< MUDANÇA: Prompt atualizado para incluir os novos campos de texto
-    const prompt = `
+// <<< MUDANÇA: A função agora aceita 'additionalQuestions'
+export const generatePremiumAnalysis = async (patientInfo, sortedSyndromes, fullAnamnesis, queixaPrincipal, sectionNotes, additionalQuestions) => {
+  
+  let notesText = '';
+  for (const sectionId in sectionNotes) {
+    if (sectionNotes[sectionId]) {
+      const sectionTitle = sections.find(s => s.id === sectionId)?.title || 'Anotações';
+      notesText += `**Anotações sobre ${sectionTitle}:**\n${sectionNotes[sectionId]}\n\n`;
+    }
+  }
+
+  const prompt = `
     Aja como um especialista sênior em Medicina Tradicional Chinesa (MTC) analisando um novo caso. Mas nunca cite no output que você é um especialista sênior. Apenas gere a análise.
     
     **Dados do Paciente:**
     - Gênero: ${patientInfo.genderLabel}
     - Idade: ${patientInfo.age} anos
+
+    ${queixaPrincipal ? `**Queixa Principal do Paciente:**\n${queixaPrincipal}\n` : ''}
+    
+    ${notesText ? `**Anotações Adicionais do Terapeuta por Seção:**\n${notesText}` : ''}
 
     **Resumo da Anamnese (Sintomas Marcados):**
     ${fullAnamnesis}
@@ -34,14 +46,26 @@ Exemplo para referencia (Não é para repetir isso e sim usar como modelo de for
 Plano de Tratamento Multifacetado:]
 
 NÃO USE TERMOS EM INGLÊS NUNCA . Nunca use coisas assim (Kidney Yang Deficiency - KYD) 
+Nunca use o termo "Crucial", "Mergulho", "Intrincado", "tpeçaria"
+Caso o terapeuta pergunta sobre fitoterapia chinesa e formlas responda com nome em pinyin (exemplo Liu Wei Dihuang Wan, e assim por diante) 
+Sempre seja objetivo e evite se esquivar nas respostas.
+Caso aluno peça opiniào se esforce em dar uma opinião justificada técnica pois há um disclaimer ao final dizendoque isso é para estudo portanto não se iniba em ser direto e objetivo e nunca se esquive de responder.
 
     ### Plano de Tratamento Multifacetado
     (Para a síndrome principal, sugira um plano de tratamento detalhado.)
     - **Acupuntura:** Justifique o usos dos pontos chave para tratamento da síndrome principal com uma breve justificativa para cada um (ex: "R3 (Taixi): Ponto Fonte do Rim para tonificar a Essência.").
     Se paciente for acima de 65 anos considere adapações para casos de idosos.
+    
 
     ### Diagnósticos Diferenciais e Questões Adicionais
     (Liste UM diagnóstico diferencial importante. Para ele, forneça DUAS perguntas chave que o terapeuta pode fazer na próxima consulta para refinar o diagnóstico.)
+
+    ${additionalQuestions ? `
+    ### Respostas às Perguntas Adicionais do Terapeuta
+    (Abaixo, responda de forma clara e objetiva às perguntas específicas feitas pelo terapeuta, baseando-se no contexto clínico apresentado.)
+    **Perguntas do Terapeuta:**
+    ${additionalQuestions}
+    ` : ''}
   `;
 
   try {
