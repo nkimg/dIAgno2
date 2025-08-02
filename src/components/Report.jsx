@@ -1,4 +1,4 @@
-// src/components/Report.jsx - VERSÃO COMPLETA COM DADOS DE TEXTO CORRIGIDOS PARA A IA
+// src/components/Report.jsx - VERSÃO COM CAMPO DE PERGUNTAS PARA IA
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Chart as ChartJS, registerables } from 'chart.js';
@@ -17,15 +17,10 @@ const ActionButtons = ({ loadingPdf, onExport, onBack, onNew, isTop = false }) =
     const baseClasses = "inline-flex items-center justify-center font-bold rounded-lg transition disabled:bg-gray-400";
     const topSizeClasses = "text-sm py-2 px-4";
     const bottomSizeClasses = "py-3 px-6";
-
     const exportClasses = "bg-red-600 text-white hover:bg-red-700";
     const backClasses = "bg-blue-500 text-white hover:bg-blue-600";
     const newClasses = "bg-gray-500 text-white hover:bg-gray-600";
-    
-    const containerClasses = isTop 
-      ? "flex flex-col items-start gap-2" 
-      : "mt-12 flex justify-center gap-4";
-
+    const containerClasses = isTop ? "flex flex-col items-start gap-2" : "mt-12 flex justify-center gap-4";
     return (
         <div id={isTop ? 'action-buttons-top' : 'action-buttons-bottom'} className={containerClasses}>
             <button onClick={onExport} disabled={loadingPdf} className={`${baseClasses} ${isTop ? topSizeClasses : bottomSizeClasses} ${exportClasses}`}>
@@ -44,16 +39,15 @@ const ActionButtons = ({ loadingPdf, onExport, onBack, onNew, isTop = false }) =
     );
 };
 
-
 function Report({ reportData, onBack, onNew }) {
-    const { patientInfo, scores, queixaPrincipal, anotacoesExtras } = reportData;
-
+    const { patientInfo, scores, queixaPrincipal, sectionNotes } = reportData;
     const reportRef = useRef(null);
     const [loadingPdf, setLoadingPdf] = useState(false);
     const [premiumAnalysis, setPremiumAnalysis] = useState('');
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [analysisError, setAnalysisError] = useState('');
     const [isPrivacyModalVisible, setIsPrivacyModalVisible] = useState(false);
+    const [additionalQuestions, setAdditionalQuestions] = useState('');
 
     const consultationDate = new Date().toLocaleDateString('pt-BR', {
         day: '2-digit', month: 'long', year: 'numeric'
@@ -99,7 +93,20 @@ function Report({ reportData, onBack, onNew }) {
 
     const radarData = { labels: Object.keys(categoryScores), datasets: [{ label: 'Sintomas Marcados', data: Object.values(categoryScores), fill: true, backgroundColor: 'rgba(54, 162, 235, 0.2)', borderColor: 'rgb(54, 162, 235)' }] };
     const secondarySyndromes = sortedSyndromes.slice(3, 6);
-    const barData = { labels: secondarySyndromes.map(s => s.name.replace(/<b>|<\/b>/g, '')), datasets: [{ label: 'Pontos', data: secondarySyndromes.map(s => s.score), backgroundColor: 'rgba(153, 102, 255, 0.6)', borderColor: 'rgba(153, 102, 255, 1)', borderWidth: 1 }] };
+    const barColors = [ 'rgba(239, 68, 68, 0.7)', 'rgba(59, 130, 246, 0.7)', 'rgba(245, 158, 11, 0.7)' ];
+    const barData = {
+        labels: secondarySyndromes.map(s => s.name.replace(/<b>|<\/b>/g, '')),
+        datasets: [{
+            label: 'Pontos',
+            data: secondarySyndromes.map(s => s.score),
+            backgroundColor: secondarySyndromes.map((_, index) => barColors[index % barColors.length]),
+            borderColor: secondarySyndromes.map((_, index) => barColors[index % barColors.length].replace('0.7', '1')),
+            borderWidth: 1
+        }]
+    };
+    const barOptions = {
+        indexAxis: 'y', maintainAspectRatio: false, scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } }, y: { ticks: { font: { weight: 'bold' } } } }, plugins: { legend: { display: false } }
+    };
     
     const heatmapCanvasRef = useRef(null);
     useEffect(() => {
@@ -166,8 +173,7 @@ function Report({ reportData, onBack, onNew }) {
                     checkedQuestions.forEach(q => { fullAnamnesisText += `- ${q.label}\n`; });
                 }
             });
-            // <<< MUDANÇA: Passando as variáveis corretas para a API
-            const analysis = await generatePremiumAnalysis(patientInfo, sortedSyndromes, fullAnamnesisText, queixaPrincipal, anotacoesExtras);
+            const analysis = await generatePremiumAnalysis(patientInfo, sortedSyndromes, fullAnamnesisText, queixaPrincipal, sectionNotes, additionalQuestions);
             setPremiumAnalysis(analysis);
         } catch (error) {
             setAnalysisError(error.message);
@@ -262,6 +268,23 @@ function Report({ reportData, onBack, onNew }) {
                       {isAnalyzing ? 'Analisando...' : 'Gerar Análise'}
                   </button>
               </div>
+
+              <div className="mt-4">
+                <label htmlFor="additional-questions" className="block text-sm font-bold text-text-main mb-2">
+                  Perguntas adicionais para a IA (Opcional):
+                </label>
+                <textarea 
+                  id="additional-questions"
+                  rows="3"
+                  maxLength="1200"
+                  className="w-full p-2 border border-indigo-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition bg-white/50"
+                  placeholder="Ex: Posso usar moxa no E36 neste caso? Me indique uma fórmula de fitoterapia e explique cada erva..."
+                  value={additionalQuestions}
+                  onChange={(e) => setAdditionalQuestions(e.target.value)}
+                />
+                <p className="text-xs text-right text-text-subtle mt-1">{additionalQuestions.length} / 1200</p>
+              </div>
+
               {isAnalyzing && <div className="text-center p-8 text-primary">Analisando o caso, por favor aguarde...</div>}
               {analysisError && <div className="mt-4 p-4 bg-red-100 text-red-700 border border-red-300 rounded-lg">{analysisError}</div>}
               {premiumAnalysis && (
@@ -270,7 +293,7 @@ function Report({ reportData, onBack, onNew }) {
                           <ReactMarkdown>{premiumAnalysis}</ReactMarkdown>
                       </div>
                       <p className="text-xs text-slate-500 italic mt-6 pt-4 border-t border-slate-200">
-                          <strong>Aviso:</strong> Esta análise foi gerada por IA (Gemini) e pode conter imprecisões. Utilize-a como um apoio ao seu raciocínio clínico, não como um substituto para o julgamento profissional.
+                          <strong>Aviso: Esta análise foi gerada por IA (Gemini) e pode conter imprecisões. Sempre valide as informações com seu próprio conhecimento e julgamento profissional.</strong>
                       </p>
                   </div>
               )}
@@ -297,7 +320,9 @@ function Report({ reportData, onBack, onNew }) {
                   </div>
                   <div className="bg-white p-6 rounded-lg shadow-lg">
                       <h2 className="text-2xl font-semibold mb-4 text-gray-800">Hipóteses Secundárias (4ª a 6ª)</h2>
-                      {secondarySyndromes.length > 0 ? <Bar data={barData} options={{ indexAxis: 'y', scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } }} /> : <p>Não há hipóteses secundárias.</p>}
+                      <div className="relative h-64">
+                        {secondarySyndromes.length > 0 ? <Bar data={barData} options={barOptions} /> : <p className="text-center text-gray-500 mt-8">Não há hipóteses secundárias suficientes.</p>}
+                      </div>
                   </div>
                   <div id="heatmap-container" className="bg-white p-6 rounded-lg shadow-lg">
                       <h2 className="text-2xl font-semibold mb-4 text-gray-800">Heatmap de Padrões por Órgão (Zang-Fu)</h2>
@@ -305,18 +330,32 @@ function Report({ reportData, onBack, onNew }) {
                   </div>
                   <div className="bg-white p-6 rounded-lg shadow-lg">
                       <h2 className="text-2xl font-semibold mb-4 text-gray-800">Resumo da Anamnese</h2>
-                      <div className="space-y-3 text-sm">
+                      <div className="space-y-4 text-sm">
+                          {queixaPrincipal && (
+                              <div className="mb-4">
+                                  <strong className="font-bold text-lg text-text-main">Queixa Principal:</strong>
+                                  <p className="text-text-subtle pl-2">{queixaPrincipal}</p>
+                              </div>
+                          )}
                           {sections.map(section => {
-                               const checkedQuestions = section.questions.filter(q => scores.allCheckedIds?.has(q.id));
-                               if (checkedQuestions.length === 0) return null;
-                               return (
-                                  <div key={section.id} className="mb-2">
-                                      <strong className="font-semibold text-gray-700">{section.title}:</strong>
+                              const checkedQuestions = section.questions.filter(q => scores.allCheckedIds?.has(q.id));
+                              const noteForSection = sectionNotes[section.id];
+                              if (checkedQuestions.length === 0 && !noteForSection) return null;
+                              return (
+                              <div key={section.id} className="mb-2">
+                                  <strong className="font-semibold text-gray-700">{section.title}:</strong>
+                                  {noteForSection && (
+                                      <p className="text-xs text-blue-600 italic pl-2 border-l-2 border-blue-200 ml-2 my-1">
+                                          {noteForSection}
+                                      </p>
+                                  )}
+                                  {checkedQuestions.length > 0 && (
                                       <ul className="list-disc list-inside ml-2">
-                                          {checkedQuestions.map(q => <li key={q.id}>{q.label}</li>)}
+                                          {checkedQuestions.map(q => ( <li key={q.id}>{q.label}</li> ))}
                                       </ul>
-                                  </div>
-                               )
+                                  )}
+                              </div>
+                              )
                           })}
                       </div>
                   </div>

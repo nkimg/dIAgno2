@@ -1,11 +1,11 @@
-// src/components/AnamnesisForm.jsx - VERSÃO COM CAMPOS REORDENADOS E BORDAS CORRIGIDAS
+// src/components/AnamnesisForm.jsx - VERSÃO COMPLETA E CORRIGIDA
 
 import React, { useState, useEffect, useRef } from 'react';
 import { sections } from '../data/mtcData';
 import Tag from './Tag';
 import EditPatientModal from './EditPatientModal';
 
-function QuestionCard({ section, selectedSymptoms, onSymptomChange, colorName }) {
+function QuestionCard({ section, selectedSymptoms, onSymptomChange, colorName, sectionNote, onSectionNoteChange }) {
   if (!section) return null;
   const styleMap = {
     rose: { bg: 'bg-rose-50', text: 'text-rose-600', border: 'border-rose-500' },
@@ -25,9 +25,27 @@ function QuestionCard({ section, selectedSymptoms, onSymptomChange, colorName })
       <div className="p-6">
         <div className="flex flex-wrap gap-3">
           {section.questions.map(q => (
-            <Tag key={q.id} label={q.label} isSelected={selectedSymptoms.has(q.id)} onClick={() => onSymptomChange(q.id, !selectedSymptoms.has(q.id))} />
+            <Tag 
+              key={q.id} 
+              label={q.label} 
+              isSelected={selectedSymptoms.has(q.id)} 
+              onClick={() => onSymptomChange(q.id, !selectedSymptoms.has(q.id))}
+            />
           ))}
         </div>
+      </div>
+      <div className="p-6 border-t border-border-color">
+        <label htmlFor={`notes-${section.id}`} className="block text-sm font-bold text-text-main mb-2">
+          Anotações Adicionais sobre "{section.title}"
+        </label>
+        <textarea 
+          id={`notes-${section.id}`}
+          rows="3"
+          className="w-full p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition bg-gray-50"
+          placeholder="Detalhes, início dos sintomas, etc..."
+          value={sectionNote || ''}
+          onChange={(e) => onSectionNoteChange(section.id, e.target.value)}
+        />
       </div>
     </div>
   );
@@ -57,10 +75,9 @@ function NavButton({ section, isActive, colorName, onClick, count }) {
   );
 }
 
-function AnamnesisForm({ patientInfo, onSubmit, selectedSymptoms, onSymptomChange, onPatientUpdate }) {
+function AnamnesisForm({ patientInfo, onSubmit, selectedSymptoms, onSymptomChange, onPatientUpdate, sectionNotes, onSectionNoteChange }) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [queixaPrincipal, setQueixaPrincipal] = useState('');
-  const [anotacoesExtras, setAnotacoesExtras] = useState('');
 
   const filteredSections = sections.filter(s => s.gender === 'all' || s.gender === patientInfo.gender);
   const [activeSectionId, setActiveSectionId] = useState(filteredSections[0]?.id);
@@ -123,19 +140,28 @@ function AnamnesisForm({ patientInfo, onSubmit, selectedSymptoms, onSymptomChang
             </div>
             
             <div className="lg:col-span-2 space-y-8" ref={contentColumnRef}>
-              <div className="bg-surface p-6 rounded-2xl shadow-sm flex justify-between items-center">
-                <div className="text-center flex-1">
-                  <h2 className="text-2xl font-bold text-text-main">{patientInfo.name}</h2>
-                  <p className="text-base text-text-subtle mt-1">{patientInfo.genderLabel}, {patientInfo.age} anos</p>
+              <div className="bg-surface p-6 rounded-2xl shadow-sm">
+                <div className="flex justify-between items-start">
+                  <div className="text-center flex-1">
+                    <h2 className="text-2xl font-bold text-text-main">{patientInfo.name}</h2>
+                    <p className="text-base text-text-subtle mt-1">{patientInfo.genderLabel}, {patientInfo.age} anos</p>
+                  </div>
+                  <button onClick={() => setIsEditModalOpen(true)} className="text-text-subtle hover:text-primary transition-colors p-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                  </button>
                 </div>
-                <button onClick={() => setIsEditModalOpen(true)} className="text-text-subtle hover:text-primary transition-colors p-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                </button>
+                <div className="mt-6 text-center">
+                  <button onClick={() => onSubmit({ queixaPrincipal })} className="bg-primary text-white font-bold py-3 px-12 rounded-lg shadow-lg hover:bg-opacity-90 transition-all duration-300 transform hover:scale-105">
+                    Gerar Relatório
+                  </button>
+                  <p className="text-xs text-text-subtle mt-2">
+                    Clique aqui quando terminar a anamnese
+                  </p>
+                </div>
               </div>
-              
-              {/* <<< MUDANÇA: Bloco Queixa Principal movido para cima */}
+
               <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg">
                 <label htmlFor="queixa-principal" className="block text-lg font-bold text-blue-800 mb-2">Queixa Principal</label>
                 <textarea 
@@ -153,29 +179,9 @@ function AnamnesisForm({ patientInfo, onSubmit, selectedSymptoms, onSymptomChang
                 selectedSymptoms={selectedSymptoms}
                 onSymptomChange={onSymptomChange}
                 colorName={cardColorNames[filteredSections.findIndex(s => s.id === activeSectionId) % cardColorNames.length]}
+                sectionNote={sectionNotes[activeSectionId]}
+                onSectionNoteChange={onSectionNoteChange}
               />
-
-              {/* <<< MUDANÇA: Bloco Anotações Extras movido para baixo */}
-              <div className="bg-gray-50 border-l-4 border-gray-400 p-4 rounded-lg">
-                <label htmlFor="anotacoes-extras" className="block text-lg font-bold text-gray-800 mb-2">Anotações Extras</label>
-                <textarea 
-                  id="anotacoes-extras"
-                  rows="3"
-                  className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition bg-white"
-                  placeholder="Observações adicionais do terapeuta, pulso, língua..."
-                  value={anotacoesExtras}
-                  onChange={(e) => setAnotacoesExtras(e.target.value)}
-                />
-              </div>
-              
-              <div className="text-center">
-                <button onClick={() => onSubmit({ queixaPrincipal, anotacoesExtras })} className="bg-primary text-white font-bold py-3 px-12 rounded-lg shadow-lg hover:bg-opacity-90 transition-all duration-300 transform hover:scale-105">
-                  Gerar Relatório
-                </button>
-                <p className="text-xs text-text-subtle mt-2">
-                  Clique aqui quando terminar a anamnese
-                </p>
-              </div>
             </div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-// src/App.jsx - VERSÃO COMPLETA QUE ORQUESTRA OS NOVOS DADOS
+// src/App.jsx - VERSÃO COMPLETA E CORRIGIDA
 
 import React, { useState } from 'react';
 import PatientInfoModal from './components/PatientInfoModal';
@@ -11,6 +11,7 @@ function App() {
   const [patientInfo, setPatientInfo] = useState(null);
   const [reportData, setReportData] = useState(null);
   const [selectedSymptoms, setSelectedSymptoms] = useState(new Set());
+  const [sectionNotes, setSectionNotes] = useState({});
 
   const handleStartAnamnesis = (info) => {
     setPatientInfo(info);
@@ -21,7 +22,7 @@ function App() {
     setPatientInfo(updatedInfo);
   };
   
-  const handleGenerateReport = ({ queixaPrincipal, anotacoesExtras }) => {
+  const handleGenerateReport = ({ queixaPrincipal }) => {
     const scores = {};
     Object.keys(syndromes).forEach(key => {
         scores[key] = { score: 0, symptoms: [] };
@@ -44,7 +45,7 @@ function App() {
         patientInfo, 
         scores, 
         queixaPrincipal, 
-        anotacoesExtras 
+        sectionNotes
     });
     setAppState('report');
     window.scrollTo(0, 0);
@@ -57,6 +58,13 @@ function App() {
   
   const handleNewAnamnesis = () => {
       window.location.reload();
+  };
+
+  const handleSectionNoteChange = (sectionId, text) => {
+    setSectionNotes(prevNotes => ({
+      ...prevNotes,
+      [sectionId]: text,
+    }));
   };
 
   if (appState === 'modal') {
@@ -75,6 +83,8 @@ function App() {
             setSelectedSymptoms(newSet);
           }}
           onPatientUpdate={handlePatientUpdate}
+          sectionNotes={sectionNotes}
+          onSectionNoteChange={handleSectionNoteChange}
       />
     );
   }

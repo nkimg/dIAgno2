@@ -1,4 +1,4 @@
-// src/components/PatientInfoModal.jsx - VERSÃO COM NOVO GRADIENTE
+// src/components/PatientInfoModal.jsx - VERSÃO COM GRADIENTE ANIMADO
 
 import React, { useState } from 'react';
 import DatePicker from 'react-datepicker';
@@ -28,8 +28,8 @@ function PatientInfoModal({ onStart }) {
   };
 
   return (
-    // <<< MUDANÇA: O fundo do modal agora usa o novo gradiente
-    <div className="fixed inset-0 bg-main-page-gradient flex items-center justify-center z-50">
+    // <<< MUDANÇA: Adicionamos as classes para o gradiente animado
+    <div className="fixed inset-0 bg-main-page-gradient bg-[length:200%_200%] animate-gradient-move flex items-center justify-center z-50">
       <div className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-2xl w-full max-w-md border border-white/50">
         <div className="text-center mb-4">
           <h1 className="text-5xl font-bold text-gray-800">dIAgno 2.0</h1>
@@ -87,9 +87,9 @@ function PatientInfoModal({ onStart }) {
           </p>
            <div className="mt-4 border-t border-gray-200 pt-4">
             <p className="text-xs text-gray-500">
-              <strong>UX Desing e Desenvolvimento:</strong> Ephraim Ferreira Medeiros<br />
+              <strong>Programação e Desenvolvimento:</strong> Ephraim Ferreira Medeiros<br />
               <strong>Conceito e Banco de Dados:</strong> Wu Tou Kwang<br />
-              <strong>Baseado na planilha original desenvolvida pelo : </strong> Prof. Sérgio Destácio Junior (CEATA)
+              <strong>Baseado na planilha original de:</strong> Prof. Sérgio Destácio Junior (CEATA)
             </p>
           </div>
         </div>
