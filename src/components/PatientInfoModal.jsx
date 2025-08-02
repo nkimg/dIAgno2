@@ -1,4 +1,4 @@
-// src/components/PatientInfoModal.jsx - VERSÃO COM PACIENTE ANÔNIMO
+// src/components/PatientInfoModal.jsx - VERSÃO COM NOVO GRADIENTE
 
 import React, { useState } from 'react';
 import DatePicker from 'react-datepicker';
@@ -8,25 +8,17 @@ function PatientInfoModal({ onStart }) {
   const [name, setName] = useState('');
   const [birthDate, setBirthDate] = useState(null);
   const [gender, setGender] = useState('female');
-  
-  // <<< MUDANÇA 1: Adicionar um novo estado para controlar o checkbox
   const [isAnonymous, setIsAnonymous] = useState(false);
 
   const handleStart = () => {
-    // <<< MUDANÇA 2: Lógica de validação atualizada
-    // Agora, o nome só é obrigatório se o checkbox NÃO estiver marcado.
-    // A data de nascimento continua obrigatória.
     if ((!name && !isAnonymous) || !birthDate) {
       alert('Por favor, preencha a data de nascimento e o nome, ou marque a opção de paciente anônimo.');
       return;
     }
-
     const ageDifMs = Date.now() - birthDate.getTime();
     const ageDate = new Date(ageDifMs);
     const age = Math.abs(ageDate.getUTCFullYear() - 1970);
-
     onStart({
-      // <<< MUDANÇA 3: Se for anônimo, usa um nome padrão. Senão, usa o nome digitado.
       name: isAnonymous ? 'Paciente Anônimo' : name,
       birthDate: birthDate.toISOString().split('T')[0],
       gender,
@@ -36,23 +28,21 @@ function PatientInfoModal({ onStart }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50">
-      <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+    // <<< MUDANÇA: O fundo do modal agora usa o novo gradiente
+    <div className="fixed inset-0 bg-main-page-gradient flex items-center justify-center z-50">
+      <div className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-2xl w-full max-w-md border border-white/50">
         <div className="text-center mb-4">
-          <h1 className="text-3xl font-bold text-gray-500">dIAgno 2.0</h1>
-          <p className="text-sm text-gray-400">Versão Beta</p>
+          <h1 className="text-5xl font-bold text-gray-800">dIAgno 2.0</h1>
+          <p className="text-sm text-gray-600">Versão Beta</p>
         </div>
-        <h2 className="text-2xl font-bold mb-6 font-sans">Informações do Paciente</h2>
+        <h2 className="text-2xl font-bold mb-6 text-gray-700">Informações do Paciente</h2>
         <div className="space-y-4">
-
-          {/* <<< MUDANÇA 4: O campo de nome agora só aparece se NÃO for anônimo */}
           {!isAnonymous && (
             <div>
               <label htmlFor="patient-name" className="block text-sm font-medium text-gray-700 mb-1">Nome Completo:</label>
               <input type="text" id="patient-name" value={name} onChange={(e) => setName(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md" placeholder="Nome do paciente" />
             </div>
           )}
-
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label htmlFor="birth-date" className="block text-sm font-medium text-gray-700 mb-1">Data de Nasc.:</label>
@@ -77,8 +67,6 @@ function PatientInfoModal({ onStart }) {
               </select>
             </div>
           </div>
-          
-          {/* <<< MUDANÇA 5: Adicionar o checkbox */}
           <div className="flex items-center mt-4">
             <input
               id="anonymous-checkbox"
@@ -91,18 +79,17 @@ function PatientInfoModal({ onStart }) {
               Continuar como Paciente Anônimo
             </label>
           </div>
-
         </div>
-        <button onClick={handleStart} className="mt-6 w-full bg-primary text-white py-2 rounded-md hover:bg-opacity-90 transition">Iniciar Anamnese</button>
+        <button onClick={handleStart} className="mt-6 w-full bg-primary text-white py-3 font-bold rounded-lg hover:bg-primary-dark transition shadow-lg">Iniciar Anamnese</button>
         <div className="mt-6 text-center">
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-600">
             <strong>Aviso:</strong> Esta é uma ferramenta de apoio aos estudos e <strong>não substitui uma consulta profissional.</strong><br/> <strong>Ao clicar em "Iniciar Anamnese", você concorda com estes termos.</strong>
           </p>
            <div className="mt-4 border-t border-gray-200 pt-4">
-            <p className="text-xs text-gray-400">
-              <strong>Programação e Desenvolvimento:</strong> Ephraim Ferreira Medeiros<br />
+            <p className="text-xs text-gray-500">
+              <strong>UX Desing e Desenvolvimento:</strong> Ephraim Ferreira Medeiros<br />
               <strong>Conceito e Banco de Dados:</strong> Wu Tou Kwang<br />
-              <strong>Baseado na planilha original de:</strong> Prof. Sérgio Destácio Junior (CEATA)
+              <strong>Baseado na planilha original desenvolvida pelo : </strong> Prof. Sérgio Destácio Junior (CEATA)
             </p>
           </div>
         </div>

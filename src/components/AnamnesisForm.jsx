@@ -1,11 +1,10 @@
-// src/components/AnamnesisForm.jsx - VERSÃO COMPLETA COM CAMPOS DE TEXTO
+// src/components/AnamnesisForm.jsx - VERSÃO COM CAMPOS REORDENADOS E BORDAS CORRIGIDAS
 
 import React, { useState, useEffect, useRef } from 'react';
 import { sections } from '../data/mtcData';
 import Tag from './Tag';
 import EditPatientModal from './EditPatientModal';
 
-// --- Componente Interno: QuestionCard ---
 function QuestionCard({ section, selectedSymptoms, onSymptomChange, colorName }) {
   if (!section) return null;
   const styleMap = {
@@ -34,7 +33,6 @@ function QuestionCard({ section, selectedSymptoms, onSymptomChange, colorName })
   );
 }
 
-// --- Componente Interno: NavButton ---
 function NavButton({ section, isActive, colorName, onClick, count }) {
   const styleMap = {
     rose: { bg: 'bg-rose-50', text: 'text-rose-600' },
@@ -59,7 +57,6 @@ function NavButton({ section, isActive, colorName, onClick, count }) {
   );
 }
 
-// --- Componente Principal do Arquivo ---
 function AnamnesisForm({ patientInfo, onSubmit, selectedSymptoms, onSymptomChange, onPatientUpdate }) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [queixaPrincipal, setQueixaPrincipal] = useState('');
@@ -88,11 +85,18 @@ function AnamnesisForm({ patientInfo, onSubmit, selectedSymptoms, onSymptomChang
 
   return (
     <>
-      <div className="min-h-screen bg-page-gradient text-text-main font-sans">
+      <div className="min-h-screen bg-anamnesis-gradient text-text-main font-sans">
         <div className="container mx-auto p-4 md:p-8">
-          <header className="mb-8 text-center">
-            <h1 className="text-4xl font-bold text-primary">dIAgno 2.0 <span className="font-light text-3xl text-primary/80">Beta</span></h1>
-            <div className="text-xs text-text-subtle mt-4">
+          <header className="mb-8">
+            <div className="flex justify-between items-center mb-4">
+              <img src="/logo.png" alt="dIAgno 2.0 Logo" className="h-24 w-auto" />
+              <div className="text-center">
+                <h1 className="text-4xl font-bold text-primary">dIAgno 2.0 <span className="font-light text-3xl text-primary/80">Beta</span></h1>
+                <p className="text-xs text-text-subtle mt-1">Ficha de Anamnese Interativa</p>
+              </div>
+              <div className="w-24"></div> 
+            </div>
+            <div className="text-center text-xs text-text-subtle">
               <p><strong>Aviso:</strong> Esta é uma ferramenta de apoio aos estudos e não substitui uma consulta profissional.</p>
             </div>
           </header>
@@ -130,30 +134,18 @@ function AnamnesisForm({ patientInfo, onSubmit, selectedSymptoms, onSymptomChang
                   </svg>
                 </button>
               </div>
-
-              <div className="bg-surface p-6 rounded-2xl shadow-sm space-y-4">
-                <div>
-                  <label htmlFor="queixa-principal" className="block text-lg font-bold text-text-main mb-2">Queixa Principal</label>
-                  <textarea 
-                    id="queixa-principal"
-                    rows="3"
-                    className="w-full p-3 border border-border-color rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition"
-                    placeholder="Descreva a principal queixa do paciente..."
-                    value={queixaPrincipal}
-                    onChange={(e) => setQueixaPrincipal(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="anotacoes-extras" className="block text-lg font-bold text-text-main mb-2">Anotações Extras</label>
-                  <textarea 
-                    id="anotacoes-extras"
-                    rows="3"
-                    className="w-full p-3 border border-border-color rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition"
-                    placeholder="Observações adicionais do terapeuta, pulso, língua..."
-                    value={anotacoesExtras}
-                    onChange={(e) => setAnotacoesExtras(e.target.value)}
-                  />
-                </div>
+              
+              {/* <<< MUDANÇA: Bloco Queixa Principal movido para cima */}
+              <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg">
+                <label htmlFor="queixa-principal" className="block text-lg font-bold text-blue-800 mb-2">Queixa Principal</label>
+                <textarea 
+                  id="queixa-principal"
+                  rows="3"
+                  className="w-full p-3 border border-blue-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition bg-white"
+                  placeholder="Descreva a principal queixa do paciente..."
+                  value={queixaPrincipal}
+                  onChange={(e) => setQueixaPrincipal(e.target.value)}
+                />
               </div>
 
               <QuestionCard 
@@ -162,11 +154,27 @@ function AnamnesisForm({ patientInfo, onSubmit, selectedSymptoms, onSymptomChang
                 onSymptomChange={onSymptomChange}
                 colorName={cardColorNames[filteredSections.findIndex(s => s.id === activeSectionId) % cardColorNames.length]}
               />
+
+              {/* <<< MUDANÇA: Bloco Anotações Extras movido para baixo */}
+              <div className="bg-gray-50 border-l-4 border-gray-400 p-4 rounded-lg">
+                <label htmlFor="anotacoes-extras" className="block text-lg font-bold text-gray-800 mb-2">Anotações Extras</label>
+                <textarea 
+                  id="anotacoes-extras"
+                  rows="3"
+                  className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition bg-white"
+                  placeholder="Observações adicionais do terapeuta, pulso, língua..."
+                  value={anotacoesExtras}
+                  onChange={(e) => setAnotacoesExtras(e.target.value)}
+                />
+              </div>
               
               <div className="text-center">
                 <button onClick={() => onSubmit({ queixaPrincipal, anotacoesExtras })} className="bg-primary text-white font-bold py-3 px-12 rounded-lg shadow-lg hover:bg-opacity-90 transition-all duration-300 transform hover:scale-105">
                   Gerar Relatório
                 </button>
+                <p className="text-xs text-text-subtle mt-2">
+                  Clique aqui quando terminar a anamnese
+                </p>
               </div>
             </div>
           </div>
